@@ -1,4 +1,14 @@
-import { User, Employee, InputData, OutputData, OperationBreakdownData } from '../types';
+
+
+import { 
+    User,
+    Employee,
+    InputData,
+    OutputData,
+    OperationBreakdownData,
+    HourlyProductionData,
+    OTListData,
+} from '../types';
 import { auth, db, storage } from '../firebase';
 import { 
     createUserWithEmailAndPassword as fbCreateUser, 
@@ -15,22 +25,16 @@ import {
     getDoc,
     getDocs,
     setDoc,
+    query,
+    where,
+    // FIX: Added missing imports for CRUD operations.
     addDoc,
     updateDoc,
     deleteDoc,
-    query,
-    where,
-    orderBy
+    Timestamp,
+    orderBy,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-
-// --- UTILS ---
-const uploadFile = async (file: File, path: string): Promise<string> => {
-    const storageRef = ref(storage, `${path}/${Date.now()}_${file.name}`);
-    const snapshot = await uploadBytes(storageRef, file);
-    return await getDownloadURL(snapshot.ref);
-};
-
+import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 
 // --- AUTH MOCKS ---
 
@@ -48,22 +52,15 @@ export const signInWithEmailAndPassword = async (email: string, password: string
     return null;
 };
 
-export const createUserWithEmailAndPassword = async (email: string, password: string, additionalData: Omit<User, 'uid' | 'email'>, profilePicture: File | null): Promise<User | null> => {
+export const createUserWithEmailAndPassword = async (email: string, password: string, additionalData: Omit<User, 'uid' | 'email'>): Promise<User | null> => {
   const userCredential = await fbCreateUser(auth, email, password);
   const firebaseUser = userCredential.user;
   if (firebaseUser) {
-    let profilePictureUrl = additionalData.profilePictureUrl || '';
-    if(profilePicture) {
-        profilePictureUrl = await uploadFile(profilePicture, 'profilePictures');
-    }
-
     const newUser: User = {
         uid: firebaseUser.uid,
         email,
         ...additionalData,
-        profilePictureUrl,
     };
-    // FIX: 'Omit' is a TypeScript type, not a runtime function. The code was attempting to use it to remove the 'uid' property from the newUser object before saving to Firestore. The correct approach is to create a new object without the 'uid' property.
     const { uid, ...dataToSave } = newUser;
     await setDoc(doc(db, 'users', firebaseUser.uid), dataToSave);
     return newUser;
@@ -85,105 +82,77 @@ export const signOutUser = async (): Promise<void> => {
     await signOut(auth);
 }
 
+// FIX: Added all missing CRUD functions.
+// --- CRUD Operations ---
 
-// --- EMPLOYEE FIRESTORE MOCKS ---
-
-const mapDocToData = <T>(doc: any): T => ({ id: doc.id, ...doc.data() } as T);
-
-export const getEmployees = async (): Promise<Employee[]> => {
-  const q = query(collection(db, "employees"), orderBy("slNo", "asc"));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => mapDocToData<Employee>(doc));
+// Generic get function
+const getData = async <T>(collectionName: string): Promise<T[]> => {
+    const collRef = collection(db, collectionName);
+    try {
+        const q = query(collRef, orderBy("slNo", "asc"));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    } catch (e) {
+        // Fallback if slNo field doesn't exist for ordering
+        console.warn(`Could not order by 'slNo' for ${collectionName}, fetching without order.`, e);
+        const querySnapshot = await getDocs(collRef);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+    }
 };
 
-export const addEmployee = async (data: Omit<Employee, 'id' | 'slNo'>): Promise<Employee> => {
-    const snapshot = await getDocs(collection(db, "employees"));
-    const slNo = snapshot.docs.length + 1;
-    const docRef = await addDoc(collection(db, "employees"), { ...data, slNo });
-    return { id: docRef.id, slNo, ...data };
+// Generic add function
+const addData = async (collectionName: string, data: object): Promise<void> => {
+    const collRef = collection(db, collectionName);
+    const querySnapshot = await getDocs(collRef);
+    const slNo = querySnapshot.size + 1;
+    await addDoc(collRef, { ...data, slNo, createdAt: Timestamp.now() });
 };
 
-export const updateEmployee = async (id: string, data: Partial<Omit<Employee, 'id' | 'slNo'>>): Promise<void> => {
-    const empDoc = doc(db, "employees", id);
-    await updateDoc(empDoc, data);
+// Generic update function
+const updateData = async (collectionName: string, id: string, data: object): Promise<void> => {
+    const docRef = doc(db, collectionName, id);
+    await updateDoc(docRef, data);
 };
 
-export const deleteEmployee = async (id: string): Promise<void> => {
-  await deleteDoc(doc(db, "employees", id));
+// Generic delete function
+const deleteData = async (collectionName: string, id: string): Promise<void> => {
+    const docRef = doc(db, collectionName, id);
+    await deleteDoc(docRef);
 };
 
 
-// --- INPUT FIRESTORE MOCKS ---
+// Employees
+export const getEmployees = () => getData<Employee>('employees');
+export const addEmployee = (data: Omit<Employee, 'id' | 'slNo'>) => addData('employees', data);
+export const updateEmployee = (id: string, data: Partial<Omit<Employee, 'id' | 'slNo'>>) => updateData('employees', id, data);
+export const deleteEmployee = (id: string) => deleteData('employees', id);
 
-export const getInputs = async(): Promise<InputData[]> => {
-    const q = query(collection(db, "inputs"), orderBy("slNo", "asc"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => mapDocToData<InputData>(doc));
-}
+// Inputs
+export const getInputs = () => getData<InputData>('inputs');
+export const addInput = (data: Omit<InputData, 'id' | 'slNo'>) => addData('inputs', data);
+export const updateInput = (id: string, data: Partial<Omit<InputData, 'id' | 'slNo'>>) => updateData('inputs', id, data);
+export const deleteInput = (id: string) => deleteData('inputs', id);
 
-export const addInput = async(data: Omit<InputData, 'id' | 'slNo'>): Promise<InputData> => {
-    const snapshot = await getDocs(collection(db, "inputs"));
-    const slNo = snapshot.docs.length + 1;
-    const docRef = await addDoc(collection(db, "inputs"), { ...data, slNo });
-    return { id: docRef.id, slNo, ...data };
-}
+// Outputs
+export const getOutputs = () => getData<OutputData>('outputs');
+export const addOutput = (data: Omit<OutputData, 'id' | 'slNo'>) => addData('outputs', data);
+export const updateOutput = (id: string, data: Partial<Omit<OutputData, 'id' | 'slNo'>>) => updateData('outputs', id, data);
+export const deleteOutput = (id: string) => deleteData('outputs', id);
 
-export const updateInput = async(id: string, data: Partial<Omit<InputData, 'id' | 'slNo'>>): Promise<void> => {
-    await updateDoc(doc(db, "inputs", id), data);
-}
+// Operation Breakdowns
+export const getOperationBreakdowns = () => getData<OperationBreakdownData>('operationBreakdowns');
+export const addOperationBreakdown = (data: Omit<OperationBreakdownData, 'id' | 'slNo'>) => addData('operationBreakdowns', data);
+export const updateOperationBreakdown = (id: string, data: Partial<Omit<OperationBreakdownData, 'id' | 'slNo'>>) => updateData('operationBreakdowns', id, data);
+export const deleteOperationBreakdown = (id: string) => deleteData('operationBreakdowns', id);
 
-export const deleteInput = async (id: string): Promise<void> => {
-    await deleteDoc(doc(db, "inputs", id));
-}
+// Hourly Productions
+export const getHourlyProductions = () => getData<HourlyProductionData>('hourlyProductions');
+export const addHourlyProduction = (data: Omit<HourlyProductionData, 'id' | 'slNo'>) => addData('hourlyProductions', data);
+export const updateHourlyProduction = (id: string, data: Partial<Omit<HourlyProductionData, 'id' | 'slNo'>>) => updateData('hourlyProductions', id, data);
+export const deleteHourlyProduction = (id: string) => deleteData('hourlyProductions', id);
 
-// --- OUTPUT FIRESTORE MOCKS ---
-
-export const getOutputs = async(): Promise<OutputData[]> => {
-    const q = query(collection(db, "outputs"), orderBy("slNo", "asc"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => mapDocToData<OutputData>(doc));
-}
-
-export const addOutput = async(data: Omit<OutputData, 'id' | 'slNo'>): Promise<OutputData> => {
-    const snapshot = await getDocs(collection(db, "outputs"));
-    const slNo = snapshot.docs.length + 1;
-    const docRef = await addDoc(collection(db, "outputs"), { ...data, slNo });
-    return { id: docRef.id, slNo, ...data };
-}
-
-export const updateOutput = async(id: string, data: Partial<Omit<OutputData, 'id' | 'slNo'>>): Promise<void> => {
-    await updateDoc(doc(db, "outputs", id), data);
-}
-
-export const deleteOutput = async (id: string): Promise<void> => {
-    await deleteDoc(doc(db, "outputs", id));
-}
-
-// --- OPERATION BREAKDOWN FIRESTORE ---
-
-export const getOperationBreakdowns = async(): Promise<OperationBreakdownData[]> => {
-    const q = query(collection(db, "operationBreakdowns"), orderBy("slNo", "asc"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => mapDocToData<OperationBreakdownData>(doc));
-}
-
-export const addOperationBreakdown = async(data: Omit<OperationBreakdownData, 'id' | 'slNo'>): Promise<OperationBreakdownData> => {
-    const snapshot = await getDocs(collection(db, "operationBreakdowns"));
-    const slNo = snapshot.docs.length + 1;
-    const docRef = await addDoc(collection(db, "operationBreakdowns"), { ...data, slNo });
-    return { id: docRef.id, slNo, ...data };
-}
-
-export const updateOperationBreakdown = async(id: string, data: Partial<Omit<OperationBreakdownData, 'id' | 'slNo'>>): Promise<void> => {
-    await updateDoc(doc(db, "operationBreakdowns", id), data);
-}
-
-export const deleteOperationBreakdown = async (id: string): Promise<void> => {
-    await deleteDoc(doc(db, "operationBreakdowns", id));
-}
-
-
-// --- STORAGE ---
-export const uploadEmployeeFile = (file: File, employeeId: string, type: 'photo' | 'nid' | 'nidBack' | 'officeId') => {
-    return uploadFile(file, `employees/${employeeId}/${type}`);
-};
+// OT Lists
+export const getOTLists = () => getData<OTListData>('otLists');
+export const addOTList = (data: Omit<OTListData, 'id' | 'slNo'>) => addData('otLists', data);
+export const updateOTList = (id: string, data: Partial<Omit<OTListData, 'id' | 'slNo'>>) => updateData('otLists', id, data);
+export const deleteOTList = (id: string) => deleteData('otLists', id);

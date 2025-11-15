@@ -72,14 +72,13 @@ const InputPage: React.FC = () => {
         } else {
             await addInput(inputData);
         }
-        fetchInputs();
-        handleCloseModal();
+        await fetchInputs();
     };
 
     const handleDeleteInput = async (id: string) => {
         if (window.confirm("Are you sure you want to delete this input record?")) {
             await deleteInput(id);
-            fetchInputs();
+            await fetchInputs();
             handleCloseModal();
         }
     };

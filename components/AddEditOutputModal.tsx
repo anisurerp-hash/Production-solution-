@@ -7,7 +7,7 @@ interface Props {
   allInputs: InputData[];
   allOutputs: OutputData[];
   onClose: () => void;
-  onSave: (data: Omit<OutputData, 'id' | 'slNo'>, id?: string) => void;
+  onSave: (data: Omit<OutputData, 'id' | 'slNo'>, id?: string) => Promise<void>;
   onDelete: (id: string) => void;
 }
 
@@ -19,6 +19,7 @@ const defaultData: Omit<OutputData, 'id' | 'slNo'> = {
 
 const AddEditOutputModal: React.FC<Props> = ({ outputData, allInputs, allOutputs, onClose, onSave, onDelete }) => {
     const [formData, setFormData] = useState(defaultData);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (outputData) {
@@ -106,17 +107,6 @@ const AddEditOutputModal: React.FC<Props> = ({ outputData, allInputs, allOutputs
         }
     }, [formData, allInputs, allOutputs, outputData]);
     
-    const totals = useMemo(() => {
-        const totalOutput = formData.sizes.reduce((sum, s) => sum + Number(s.outputQuantity || 0), 0);
-        const totalBalance = formData.sizes.reduce((sum, s) => sum + Number(s.balanceQuantity || 0), 0);
-        return { totalOutput, totalBalance };
-    }, [formData.sizes]);
-
-    useEffect(() => {
-        setFormData(prev => ({...prev, totalOutputQuantity: totals.totalOutput, totalBalanceQuantity: totals.totalBalance}));
-    }, [totals]);
-
-
     const handleSimpleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => {
@@ -146,21 +136,39 @@ const AddEditOutputModal: React.FC<Props> = ({ outputData, allInputs, allOutputs
     };
 
     const handleOutputQtyChange = (id: string, newOutputQty: number) => {
-        setFormData(prev => ({
-            ...prev,
-            sizes: prev.sizes.map(s => {
+        setFormData(prev => {
+            const newSizes = prev.sizes.map(s => {
                 if (s.id === id) {
                     const balance = s.inputQuantity - newOutputQty;
                     return { ...s, outputQuantity: newOutputQty, balanceQuantity: balance };
                 }
                 return s;
-            })
-        }));
+            });
+    
+            const newTotalOutput = newSizes.reduce((sum, s) => sum + Number(s.outputQuantity || 0), 0);
+            const newTotalBalance = newSizes.reduce((sum, s) => sum + Number(s.balanceQuantity || 0), 0);
+    
+            return {
+                ...prev,
+                sizes: newSizes,
+                totalOutputQuantity: newTotalOutput,
+                totalBalanceQuantity: newTotalBalance
+            };
+        });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(formData, outputData?.id);
+        setIsSaving(true);
+        try {
+            await onSave(formData, outputData?.id);
+            onClose();
+        } catch (error) {
+            console.error("Failed to save output data:", error);
+            alert("An error occurred while saving. Please try again.");
+        } finally {
+            setIsSaving(false);
+        }
     };
     
     const renderSelect = (name: string, label: string, value: string, options: string[], disabled: boolean = false) => (
@@ -184,7 +192,7 @@ const AddEditOutputModal: React.FC<Props> = ({ outputData, allInputs, allOutputs
                     <button onClick={onClose} className="p-1 rounded-full hover:bg-[#2a3760]">&times;</button>
                 </header>
 
-                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
+                <form id="output-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
                     <div>
                         <h3 className="text-lg font-semibold text-[#1B2445] border-b-2 mb-4 pb-1">Main Information</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -230,18 +238,20 @@ const AddEditOutputModal: React.FC<Props> = ({ outputData, allInputs, allOutputs
                     <div className="flex justify-around text-center p-4 bg-gray-50 rounded-lg">
                         <div>
                             <h3 className="text-lg font-semibold text-gray-700">Total Output</h3>
-                            <p className="text-2xl font-bold text-green-600">{totals.totalOutput}</p>
+                            <p className="text-2xl font-bold text-green-600">{formData.totalOutputQuantity}</p>
                         </div>
                         <div>
                             <h3 className="text-lg font-semibold text-gray-700">Total Balance</h3>
-                            <p className="text-2xl font-bold text-red-600">{totals.totalBalance}</p>
+                            <p className="text-2xl font-bold text-red-600">{formData.totalBalanceQuantity}</p>
                         </div>
                     </div>
                 </form>
                 <footer className="flex justify-end items-center gap-4 p-4 border-t sticky bottom-0 bg-white">
-                    {outputData && <button type="button" onClick={() => onDelete(outputData.id)} className="bg-[#e74c3c] text-white px-4 py-2 rounded-lg hover:bg-red-600">Delete</button>}
-                    <button type="button" onClick={onClose} className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">Cancel</button>
-                    <button type="submit" onClick={handleSubmit} className="bg-[#1B2445] text-white px-4 py-2 rounded-lg hover:bg-[#2a3760]">Save</button>
+                    {outputData && <button type="button" onClick={() => onDelete(outputData.id)} className="bg-[#e74c3c] text-white px-4 py-2 rounded-lg hover:bg-red-600" disabled={isSaving}>Delete</button>}
+                    <button type="button" onClick={onClose} className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400" disabled={isSaving}>Cancel</button>
+                    <button type="submit" form="output-form" className="bg-[#1B2445] text-white px-4 py-2 rounded-lg hover:bg-[#2a3760] disabled:bg-gray-400" disabled={isSaving}>
+                        {isSaving ? 'Processing...' : 'Save'}
+                    </button>
                 </footer>
             </div>
         </div>

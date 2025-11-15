@@ -50,14 +50,13 @@ const EmployeesInformationPage: React.FC = () => {
     } else {
         await addEmployee(employeeData);
     }
-    fetchEmployees();
-    handleCloseModal();
+    await fetchEmployees();
   };
   
   const handleDeleteEmployee = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this employee?")) {
         await deleteEmployee(id);
-        fetchEmployees();
+        await fetchEmployees();
         handleCloseModal();
     }
   };
@@ -193,6 +192,7 @@ const EmployeesInformationPage: React.FC = () => {
       {isModalOpen && (
         <AddEditEmployeeModal
           employee={selectedEmployee}
+          allEmployees={employees}
           onClose={handleCloseModal}
           onSave={handleSaveEmployee}
           onDelete={handleDeleteEmployee}

@@ -7,16 +7,16 @@ const RegisterPage: React.FC = () => {
   const { navigate } = useAppContext();
   const [formData, setFormData] = useState({
     fullName: '',
+    fatherName: '',
+    motherName: '',
+    phone: '',
     officeId: '',
     designation: '',
     department: '',
     email: '',
-    phone: '',
     password: '',
     confirmPassword: '',
   });
-  const [profilePicture, setProfilePicture] = useState<File | null>(null);
-  const [picturePreview, setPicturePreview] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,18 +25,6 @@ const RegisterPage: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
   
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setProfilePicture(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPicturePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -58,13 +46,12 @@ const RegisterPage: React.FC = () => {
     }
 
     try {
-      const additionalData: Omit<User, 'uid' | 'email'> = { ...formData, profilePictureUrl: '' };
+      const { password, confirmPassword, ...additionalData } = formData;
       
       const newUser = await createUserWithEmailAndPassword(
         formData.email,
         formData.password,
-        additionalData,
-        profilePicture
+        additionalData
       );
 
       if (newUser) {
@@ -97,22 +84,16 @@ const RegisterPage: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
           <input name="fullName" placeholder="Full Name" onChange={handleChange} className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1B2445] outline-none" />
+          <input name="fatherName" placeholder="Father's Name" onChange={handleChange} className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1B2445] outline-none" />
+          <input name="motherName" placeholder="Mother's Name" onChange={handleChange} className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1B2445] outline-none" />
+          <input type="tel" name="phone" placeholder="Phone Number" onChange={handleChange} className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1B2445] outline-none" />
           <input name="officeId" placeholder="Office ID Number" onChange={handleChange} className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1B2445] outline-none" />
           <input name="designation" placeholder="Designation" onChange={handleChange} className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1B2445] outline-none" />
           <input name="department" placeholder="Department" onChange={handleChange} className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1B2445] outline-none" />
           <input type="email" name="email" placeholder="Email Address" onChange={handleChange} className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1B2445] outline-none" />
-          <input type="tel" name="phone" placeholder="Phone Number" onChange={handleChange} className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1B2445] outline-none" />
           <input type="password" name="password" placeholder="Password" onChange={handleChange} className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1B2445] outline-none" />
           <input type="password" name="confirmPassword" placeholder="Confirm Password" onChange={handleChange} className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1B2445] outline-none" />
           
-          <div className="flex items-center space-x-4">
-              {picturePreview && <img src={picturePreview} alt="Preview" className="w-16 h-16 rounded-full object-cover"/>}
-             <label className="block">
-                <span className="sr-only">Choose profile photo</span>
-                <input type="file" onChange={handleFileChange} accept="image/*" className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#2a3760] file:text-white hover:file:bg-[#1B2445]"/>
-            </label>
-          </div>
-
           <button type="submit" disabled={loading} className="w-full bg-[#1B2445] text-white font-bold py-3 rounded-lg hover:bg-[#2a3760] transition-colors disabled:bg-gray-400">
             {loading ? 'Registering...' : 'Register'}
           </button>

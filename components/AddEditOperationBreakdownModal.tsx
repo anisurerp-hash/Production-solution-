@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { OperationBreakdownData, Employee, OperationBreakdownPerson } from '../types';
 
 interface Props {
   breakdownData: OperationBreakdownData | null;
   allEmployees: Employee[];
   onClose: () => void;
-  onSave: (data: Omit<OperationBreakdownData, 'id' | 'slNo'>, id?: string) => void;
+  onSave: (data: Omit<OperationBreakdownData, 'id' | 'slNo'>, id?: string) => Promise<void>;
   onDelete: (id: string) => void;
 }
 
@@ -17,6 +18,7 @@ const defaultData: Omit<OperationBreakdownData, 'id' | 'slNo'> = {
 
 const AddEditOperationBreakdownModal: React.FC<Props> = ({ breakdownData, allEmployees, onClose, onSave, onDelete }) => {
     const [formData, setFormData] = useState(defaultData);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (breakdownData) {
@@ -26,15 +28,6 @@ const AddEditOperationBreakdownModal: React.FC<Props> = ({ breakdownData, allEmp
         }
     }, [breakdownData]);
     
-    // Auto-calculate total manpower
-    const totalManpower = useMemo(() => {
-        return formData.persons.reduce((sum, p) => sum + Number(p.noOfMc || 0), 0);
-    }, [formData.persons]);
-
-    useEffect(() => {
-        setFormData(prev => ({...prev, manpower: totalManpower}));
-    }, [totalManpower]);
-
     const handleSimpleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         const finalValue = e.target.type === 'number' && value !== '' ? Number(value) : value;
@@ -56,7 +49,8 @@ const AddEditOperationBreakdownModal: React.FC<Props> = ({ breakdownData, allEmp
                 }
                 return p;
             });
-            return { ...prev, persons: newPersons };
+            const newManpower = newPersons.reduce((sum, p) => sum + Number(p.noOfMc || 0), 0);
+            return { ...prev, persons: newPersons, manpower: newManpower };
         });
     };
 
@@ -68,12 +62,25 @@ const AddEditOperationBreakdownModal: React.FC<Props> = ({ breakdownData, allEmp
     };
 
     const removePerson = (id: string) => {
-        setFormData(prev => ({...prev, persons: prev.persons.filter(p => p.id !== id)}));
+        setFormData(prev => {
+            const newPersons = prev.persons.filter(p => p.id !== id);
+            const newManpower = newPersons.reduce((sum, p) => sum + Number(p.noOfMc || 0), 0);
+            return {...prev, persons: newPersons, manpower: newManpower};
+        });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(formData, breakdownData?.id);
+        setIsSaving(true);
+        try {
+            await onSave(formData, breakdownData?.id);
+            onClose();
+        } catch (error) {
+            console.error("Failed to save breakdown data:", error);
+            alert("An error occurred while saving. Please try again.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const renderInfoInput = (name: string, placeholder: string, type: string = 'text', value: string | number, extraProps: object = {}) => (
@@ -181,9 +188,11 @@ const AddEditOperationBreakdownModal: React.FC<Props> = ({ breakdownData, allEmp
                 </form>
 
                 <footer className="flex justify-end items-center gap-4 p-4 border-t sticky bottom-0 bg-white flex-shrink-0">
-                    {breakdownData && <button type="button" onClick={() => onDelete(breakdownData.id)} className="bg-[#e74c3c] text-white px-4 py-2 rounded-lg hover:bg-red-600">Delete</button>}
-                    <button type="button" onClick={onClose} className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">Cancel</button>
-                    <button type="button" onClick={handleSubmit} className="bg-[#1B2445] text-white px-4 py-2 rounded-lg hover:bg-[#2a3760]">Save</button>
+                    {breakdownData && <button type="button" onClick={() => onDelete(breakdownData.id)} className="bg-[#e74c3c] text-white px-4 py-2 rounded-lg hover:bg-red-600" disabled={isSaving}>Delete</button>}
+                    <button type="button" onClick={onClose} className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400" disabled={isSaving}>Cancel</button>
+                    <button type="submit" className="bg-[#1B2445] text-white px-4 py-2 rounded-lg hover:bg-[#2a3760] disabled:bg-gray-400" disabled={isSaving}>
+                        {isSaving ? 'Saving...' : 'Save'}
+                    </button>
                 </footer>
             </div>
         </div>

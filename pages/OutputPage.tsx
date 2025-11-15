@@ -72,14 +72,13 @@ const OutputPage: React.FC = () => {
         } else {
             await addOutput(outputData);
         }
-        fetchData();
-        handleCloseModal();
+        await fetchData();
     };
 
     const handleDeleteOutput = async (id: string) => {
         if (window.confirm("Are you sure you want to delete this output record?")) {
             await deleteOutput(id);
-            fetchData();
+            await fetchData();
             handleCloseModal();
         }
     };

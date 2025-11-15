@@ -1,5 +1,5 @@
 {
-  "name": "Production Solution",
+  "name": " Production Solution",
   "description": "A comprehensive mobile application for managing production solutions, including employee information, production input/output, and more, with Firebase integration.",
   "requestFramePermissions": [
     "camera"

@@ -1,55 +1,77 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { useAppContext } from '../App';
 import { Page } from '../types';
 
+interface FooterButtonProps {
+    targetPage: Page;
+    // FIX: Changed JSX.Element to React.ReactNode to fix "Cannot find namespace 'JSX'" error.
+    icon: React.ReactNode;
+}
+
 const Footer: React.FC = () => {
-    const { navigate } = useAppContext();
-    const [activeButton, setActiveButton] = useState('home');
+    const { navigate, currentPage } = useAppContext();
 
-    const handleNavigation = (page: Page, buttonName: string) => {
-        navigate(page);
-        setActiveButton(buttonName);
-    }
-    
-  const iconButtonClasses = "flex items-center justify-center w-[45px] h-[45px] rounded-full transition-all duration-300";
-  const activeClasses = "bg-gray-200 text-[#1B2445]";
-  const inactiveClasses = "bg-white text-[#1B2445] hover:bg-gray-100";
+    const FooterButton: React.FC<FooterButtonProps> = ({ targetPage, icon }) => {
+        const isActive = currentPage === targetPage;
+        return (
+            <button
+                onClick={() => navigate(targetPage)}
+                className={`flex flex-col items-center justify-center w-16 h-16 transition-transform transform hover:scale-110`}
+                aria-label={Page[targetPage]}
+            >
+                <div className={`w-[45px] h-[45px] rounded-full flex items-center justify-center transition-colors ${isActive ? 'bg-gray-300' : 'bg-white'}`}>
+                    <div className={`w-6 h-6 ${isActive ? 'text-white' : 'text-[#1B2445]'}`}>
+                        {icon}
+                    </div>
+                </div>
+            </button>
+        );
+    };
 
-  return (
-    <footer className="fixed bottom-0 left-0 right-0 h-[60px] bg-[#1B2445] flex items-center justify-around z-50 shadow-[0_-2px_5px_rgba(0,0,0,0.1)]">
-      {/* Home Button */}
-      <button onClick={() => handleNavigation(Page.Home, 'home')} className={`${iconButtonClasses} ${activeButton === 'home' ? activeClasses : inactiveClasses}`}>
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-          <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-        </svg>
-      </button>
-      {/* Calculator Button */}
-      <button className={`${iconButtonClasses} ${inactiveClasses}`}>
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm1 2a1 1 0 00-1 1v2a1 1 0 001 1h6a1 1 0 001-1V5a1 1 0 00-1-1H7zM6 14a1 1 0 011-1h2a1 1 0 110 2H7a1 1 0 01-1-1zm5-5a1 1 0 100 2h2a1 1 0 100-2h-2z" clipRule="evenodd" />
-        </svg>
-      </button>
-      {/* Settings Button */}
-      <button className={`${iconButtonClasses} ${inactiveClasses}`}>
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-        </svg>
-      </button>
-      {/* Message Button */}
-      <button className={`${iconButtonClasses} ${inactiveClasses}`}>
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clipRule="evenodd" />
-        </svg>
-      </button>
-      {/* Call Button */}
-      <button className={`${iconButtonClasses} ${inactiveClasses}`}>
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-          <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-        </svg>
-      </button>
-    </footer>
-  );
+    return (
+        <footer className="fixed bottom-0 left-0 right-0 h-[60px] bg-[#1B2445] flex items-center justify-around z-50 shadow-[0_-2px_5px_rgba(0,0,0,0.1)]">
+            <FooterButton
+                targetPage={Page.Home}
+                icon={
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                    </svg>
+                }
+            />
+            <FooterButton
+                targetPage={Page.Calculator}
+                icon={
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-4 14h-2v-2h2v2zm0-4h-2v-2h2v2zm-4 4H9v-2h2v2zm0-4H9v-2h2v2zm4-4h-2V9h2v2zm-4 0H9V9h2v2zm4-4h-2V5h2v2zm-4 0H9V5h2v2z"/>
+                    </svg>
+                }
+            />
+            <FooterButton
+                targetPage={Page.Settings}
+                icon={
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+                    </svg>
+                }
+            />
+            <FooterButton
+                targetPage={Page.Messages}
+                icon={
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                    </svg>
+                }
+            />
+            <FooterButton
+                targetPage={Page.Contacts}
+                icon={
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.02.74-.25 1.02l-2.2 2.2z"/>
+                    </svg>
+                }
+            />
+        </footer>
+    );
 };
 
 export default Footer;

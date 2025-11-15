@@ -1,11 +1,11 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { InputData, InputDataSize } from '../types';
 
 interface Props {
   inputData: InputData | null;
   onClose: () => void;
-  onSave: (data: Omit<InputData, 'id' | 'slNo'>, id?: string) => void;
+  onSave: (data: Omit<InputData, 'id' | 'slNo'>, id?: string) => Promise<void>;
   onDelete: (id: string) => void;
 }
 
@@ -18,6 +18,7 @@ const defaultData: Omit<InputData, 'id' | 'slNo'> = {
 
 const AddEditInputModal: React.FC<Props> = ({ inputData, onClose, onSave, onDelete }) => {
     const [formData, setFormData] = useState(defaultData);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (inputData) {
@@ -27,23 +28,20 @@ const AddEditInputModal: React.FC<Props> = ({ inputData, onClose, onSave, onDele
         }
     }, [inputData]);
     
-    const totalQuantity = useMemo(() => {
-        return formData.sizes.reduce((sum, size) => sum + Number(size.quantity || 0), 0);
-    }, [formData.sizes]);
-
-    useEffect(() => {
-        setFormData(prev => ({...prev, totalQuantity}));
-    }, [totalQuantity]);
-
     const handleSimpleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({...prev, [e.target.name]: e.target.value}));
     };
 
     const handleSizeChange = (id: string, field: keyof Omit<InputDataSize, 'id'>, value: string | number) => {
-        setFormData(prev => ({
-            ...prev,
-            sizes: prev.sizes.map(s => s.id === id ? {...s, [field]: value} : s)
-        }));
+        setFormData(prev => {
+            const newSizes = prev.sizes.map(s => s.id === id ? {...s, [field]: value} : s);
+            const newTotalQuantity = newSizes.reduce((sum, size) => sum + Number(size.quantity || 0), 0);
+            return {
+                ...prev,
+                sizes: newSizes,
+                totalQuantity: newTotalQuantity
+            };
+        });
     };
 
     const addSize = () => {
@@ -54,12 +52,29 @@ const AddEditInputModal: React.FC<Props> = ({ inputData, onClose, onSave, onDele
     };
 
     const removeSize = (id: string) => {
-        setFormData(prev => ({...prev, sizes: prev.sizes.filter(s => s.id !== id)}));
+        setFormData(prev => {
+            const newSizes = prev.sizes.filter(s => s.id !== id);
+            const newTotalQuantity = newSizes.reduce((sum, size) => sum + Number(size.quantity || 0), 0);
+            return {
+                ...prev,
+                sizes: newSizes,
+                totalQuantity: newTotalQuantity
+            };
+        });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(formData, inputData?.id);
+        setIsSaving(true);
+        try {
+            await onSave(formData, inputData?.id);
+            onClose();
+        } catch (error) {
+            console.error("Failed to save input data:", error);
+            alert("An error occurred while saving. Please try again.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -107,15 +122,17 @@ const AddEditInputModal: React.FC<Props> = ({ inputData, onClose, onSave, onDele
                     </div>
                      <div>
                         <h3 className="text-lg font-semibold text-[#1B2445] border-b-2 mb-2 pb-1">Total Quantity</h3>
-                        <p className="text-2xl font-bold">{totalQuantity}</p>
+                        <p className="text-2xl font-bold">{formData.totalQuantity}</p>
                     </div>
 
                     
                 </form>
                 <footer className="flex justify-end items-center gap-4 p-4 border-t sticky bottom-0 bg-white flex-shrink-0">
-                    {inputData && <button type="button" onClick={() => onDelete(inputData.id)} className="bg-[#e74c3c] text-white px-4 py-2 rounded-lg hover:bg-red-600">Delete</button>}
-                    <button type="button" onClick={onClose} className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">Cancel</button>
-                    <button type="button" onClick={handleSubmit} className="bg-[#1B2445] text-white px-4 py-2 rounded-lg hover:bg-[#2a3760]">Save</button>
+                    {inputData && <button type="button" onClick={() => onDelete(inputData.id)} className="bg-[#e74c3c] text-white px-4 py-2 rounded-lg hover:bg-red-600" disabled={isSaving}>Delete</button>}
+                    <button type="button" onClick={onClose} className="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400" disabled={isSaving}>Cancel</button>
+                    <button type="submit" form="input-form" className="bg-[#1B2445] text-white px-4 py-2 rounded-lg hover:bg-[#2a3760] disabled:bg-gray-400" disabled={isSaving}>
+                        {isSaving ? 'Saving...' : 'Save'}
+                    </button>
                 </footer>
             </div>
         </div>

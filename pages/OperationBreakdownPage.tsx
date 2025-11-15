@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { getOperationBreakdowns, addOperationBreakdown, updateOperationBreakdown, deleteOperationBreakdown, getEmployees } from '../services/firebaseService';
 import { OperationBreakdownData, Employee, OperationBreakdownPerson } from '../types';
@@ -59,14 +60,13 @@ const OperationBreakdownPage: React.FC = () => {
         } else {
             await addOperationBreakdown(data);
         }
-        fetchData();
-        handleCloseModal();
+        await fetchData();
     };
 
     const handleDeleteBreakdown = async (id: string) => {
         if (window.confirm("Are you sure you want to delete this operation breakdown?")) {
             await deleteOperationBreakdown(id);
-            fetchData();
+            await fetchData();
             handleCloseModal();
         }
     };

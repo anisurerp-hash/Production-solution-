@@ -6,21 +6,26 @@ import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import HomePage from './pages/HomePage';
 import Layout from './components/Layout';
-import EmployeesInformationPage from './pages/EmployeesInformationPage';
-import InputPage from './pages/InputPage';
-import OutputPage from './pages/OutputPage';
-import POFilePage from './pages/POFilePage';
-import OperationBreakdownPage from './pages/OperationBreakdownPage';
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from './firebase';
+
+import EmployeesInformationPage from './pages/EmployeesInformationPage';
+import InputPage from './pages/InputPage';
+import OutputPage from './pages/OutputPage';
+import OperationBreakdownPage from './pages/OperationBreakdownPage';
+import POFilePage from './pages/POFilePage';
+import PlaceholderPage from './components/PlaceholderPage';
+import HourlyProductionReportPage from './pages/HourlyProductionReportPage';
+import OTListPage from './pages/OTListPage';
 
 
 interface AppContextType {
   navigate: (page: Page) => void;
   user: User | null;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  currentPage: Page;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -90,16 +95,73 @@ const App: React.FC = () => {
         return <ForgotPasswordPage />;
       case Page.Home:
         return <HomePage />;
-      case Page.Employees:
+      
+      // Home page routes
+      case Page.EmployeesInformation:
         return <EmployeesInformationPage />;
       case Page.Input:
         return <InputPage />;
       case Page.Output:
         return <OutputPage />;
-      case Page.POFile:
-        return <POFilePage />;
       case Page.OperationBreakdown:
         return <OperationBreakdownPage />;
+      case Page.POFile:
+        return <POFilePage />;
+
+      // New placeholder pages from home
+      case Page.HourlyProductionReport: return <HourlyProductionReportPage />;
+      case Page.ProductionSummary: return <PlaceholderPage title="Production Summary" />;
+      case Page.OTList: return <OTListPage />;
+      case Page.QualityRequirement: return <PlaceholderPage title="Quality Requirement" />;
+      case Page.ProductionPlanning: return <PlaceholderPage title="Production Planning" />;
+        
+      // Footer routes
+      case Page.Calculator: return <PlaceholderPage title="Calculator" />;
+      case Page.Settings: return <PlaceholderPage title="Settings" />;
+      case Page.Messages: return <PlaceholderPage title="Messages" />;
+      case Page.Contacts: return <PlaceholderPage title="Contacts" />;
+      
+      // Slider Menu: Production
+      case Page.ProdCutting: return <PlaceholderPage title="Cutting" />;
+      case Page.ProdBundle: return <PlaceholderPage title="Bundle" />;
+      case Page.ProdLineFeeding: return <PlaceholderPage title="Line Feeding" />;
+      case Page.ProdSewing: return <PlaceholderPage title="Sewing" />;
+      case Page.ProdWIP: return <PlaceholderPage title="WIP" />;
+      case Page.ProdBottleneck: return <PlaceholderPage title="Bottleneck" />;
+      case Page.ProdFinishing: return <PlaceholderPage title="Finishing" />;
+      case Page.ProdFinishingStatus: return <PlaceholderPage title="Finishing Status" />;
+      case Page.ProdPacking: return <PlaceholderPage title="Packing" />;
+      case Page.ProdCarton: return <PlaceholderPage title="Carton" />;
+      case Page.ProdReportDaily: return <PlaceholderPage title="Daily Production Report" />;
+      case Page.ProdReportTarget: return <PlaceholderPage title="Target vs Achievement Report" />;
+      case Page.ProdReportRework: return <PlaceholderPage title="Rework / Reject Report" />;
+
+      // Slider Menu: Quality
+      case Page.QualityFabric: return <PlaceholderPage title="Fabric QC" />;
+      case Page.Quality4Point: return <PlaceholderPage title="4-Point System" />;
+      case Page.QualityShrinkage: return <PlaceholderPage title="Shrinkage Test" />;
+      case Page.QualityLabTest: return <PlaceholderPage title="Lab Test" />;
+      case Page.QualityInline: return <PlaceholderPage title="Inline QC" />;
+      case Page.QualityDefectEntry: return <PlaceholderPage title="Defect Entry" />;
+      case Page.QualityRework: return <PlaceholderPage title="Rework" />;
+      case Page.QualityEndline: return <PlaceholderPage title="Endline QC" />;
+      case Page.QualityMeasurement: return <PlaceholderPage title="Measurement" />;
+      case Page.QualityAQL: return <PlaceholderPage title="AQL" />;
+      case Page.QualityFinal: return <PlaceholderPage title="Final QC" />;
+      case Page.QualityCarton: return <PlaceholderPage title="Carton QC" />;
+      case Page.QualityReportDaily: return <PlaceholderPage title="Daily QC Report" />;
+      case Page.QualityReportDefect: return <PlaceholderPage title="Defect Trend Report" />;
+      case Page.QualityReportMeasurement: return <PlaceholderPage title="Measurement Report" />;
+      
+      // Slider Menu: IE
+      case Page.IETimeStudy: return <PlaceholderPage title="Time Study" />;
+      case Page.IELineBalance: return <PlaceholderPage title="Line Balance" />;
+      case Page.IEEfficiency: return <PlaceholderPage title="Efficiency" />;
+      case Page.IELossTime: return <PlaceholderPage title="Loss Time" />;
+      case Page.IEReportDaily: return <PlaceholderPage title="IE Daily Report" />;
+      case Page.IEReportCapacity: return <PlaceholderPage title="Capacity Report" />;
+      case Page.IEReportEfficiency: return <PlaceholderPage title="Efficiency Report" />;
+
       default:
         return user ? <HomePage /> : <LoginPage/>;
     }
@@ -108,7 +170,7 @@ const App: React.FC = () => {
   const showLayout = !!user;
 
   return (
-    <AppContext.Provider value={{ navigate, user, setUser }}>
+    <AppContext.Provider value={{ navigate, user, setUser, currentPage: page }}>
         <div className="bg-white font-sans">
             {showLayout ? <Layout>{renderPage()}</Layout> : renderPage()}
         </div>
